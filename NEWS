@@ -1,3 +1,6 @@
+Changes in version 1.1.1 (2021-05-04)
++ Fixed a bug causing endless queries in Ubuntu 20.04 when a firewall was present
+
 Changes in version 0.99.9 (2020-10-01)
 + Reverted changes introduced in 0.99.6 
 + Set SSL security level to 1 in Linux environment to bypass a bug in OpenSSL 1.1.1

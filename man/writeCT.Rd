@@ -7,7 +7,8 @@ Writes a file with the secondary structure of an RNA in the CT format
 (Connectivity Table).
 }
 \usage{
-writeCT(filename, sequence, secondaryStructure=NULL, sequenceName="Sequence", pairedBases=NULL)
+writeCT(filename, sequence, secondaryStructure=NULL, sequenceName="Sequence", 
+        pairedBases=NULL)
 }
 \arguments{
   \item{filename}{A string indicating the path to the CT file to be written. A

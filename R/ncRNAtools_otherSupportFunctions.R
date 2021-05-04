@@ -70,7 +70,9 @@ sendAlternativeSecondaryStructureQuery <- function(sequence, gammaWeight, infere
 checkSecondaryStructureQuery <- function(requestID) {
   secondaryStructureURL <- paste(rtoolsBaseURL, "cgi-bin/result.cgi?req_id=", 
                                  requestID, sep="")
-  queryRunning <- !any(grepl("adding", names(GET(secondaryStructureURL)$headers)))
+  queryHeaders <- GET(secondaryStructureURL)$headers
+  queryRunning <- (!any(grepl("adding", names(queryHeaders)))) &
+    (!grepl("adding", queryHeaders$server))  
   if (queryRunning) {
     message("Secondary structure prediction is running, please wait.")
     return(queryRunning)
