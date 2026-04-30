@@ -40,8 +40,7 @@ sendSecondaryStructureQuery <- function(sequence, method, gammaWeight, inference
   response <- POST(registerURL,
                    body=formData,
                    encode="form",
-                   add_headers("Host"="rtools.cbrc.jp",
-                               "Content-Type"="application/x-www-form-urlencoded",
+                   add_headers("Content-Type"="application/x-www-form-urlencoded",
                                "Upgrade-Insecure-Requests"="1",
                                "Accept"="*/*"))
   redirectURL <- response$all_headers[[1]]$headers$location
@@ -58,8 +57,7 @@ sendAlternativeSecondaryStructureQuery <- function(sequence, gammaWeight, infere
   response <- POST(registerURL,
                    body=formData,
                    encode="form",
-                   add_headers("Host"="rtools.cbrc.jp",
-                               "Content-Type"="application/x-www-form-urlencoded",
+                   add_headers("Content-Type"="application/x-www-form-urlencoded",
                                "Upgrade-Insecure-Requests"="1",
                                "Accept"="*/*"))
   redirectURL <- response$all_headers[[1]]$headers$location
@@ -68,11 +66,10 @@ sendAlternativeSecondaryStructureQuery <- function(sequence, gammaWeight, infere
 }
 
 checkSecondaryStructureQuery <- function(requestID) {
-  secondaryStructureURL <- paste(rtoolsBaseURL, "cgi-bin/result.cgi?req_id=", 
+  secondaryStructureURL <- paste(rtoolsBaseURL, "result.cgi?req_id=", 
                                  requestID, sep="")
-  queryHeaders <- GET(secondaryStructureURL)$headers
-  queryRunning <- (!any(grepl("adding", names(queryHeaders)))) &
-    (!grepl("adding", queryHeaders$server))  
+  queryResponse <- content(GET(secondaryStructureURL), as="text", encoding="UTF-8")
+  queryRunning <- !grepl("Completed", queryResponse)
   if (queryRunning) {
     message("Secondary structure prediction is running, please wait.")
     return(queryRunning)
@@ -89,13 +86,13 @@ checkSecondaryStructureQuery <- function(requestID) {
 retrieveSecondaryStructureResults <-function(requestID, methodCode) {
   secondaryStructureURL <- paste(rtoolsBaseURL, "work/", requestID, "/", 
                                  methodCode, "/structure.txt", sep="")
-  secondaryStructureResponseContent <- content(GET(secondaryStructureURL))
+  secondaryStructureResponseContent <- content(GET(secondaryStructureURL), as="text", encoding="UTF-8")
   secondaryStructure <- list(sequence=splitString(secondaryStructureResponseContent, split="\n")[2],
                              secondaryStructure=splitString(splitString(secondaryStructureResponseContent, split="\n")[3], split=" ")[1])
   if(methodCode %in% c(1, 2)) {
     basePairProbsURL <- paste(rtoolsBaseURL, "work/", requestID, "/", 
                               methodCode, "/base-pairing-prob.txt", sep="")
-    basePairProbsResponseContent <- content(GET(basePairProbsURL))
+    basePairProbsResponseContent <- content(GET(basePairProbsURL), as="text", encoding="UTF-8")
     maxFieldsNumber <- max(count.fields(textConnection(basePairProbsResponseContent), sep=" "))
     basePairProbsTable <- read.table(textConnection(basePairProbsResponseContent), 
                                      header=FALSE, 
@@ -112,14 +109,14 @@ retrieveSecondaryStructureResults <-function(requestID, methodCode) {
 
 retrieveAlternativeSecondaryStructureResults <- function(requestID) {
   numberAltStructures <- sum(gregexpr("range of Hamming distance",
-                                      xml_text(content(GET(paste(rtoolsBaseURL, "cgi-bin/result.cgi?req_id=", requestID, sep="")))),
+                                      xml_text(content(GET(paste(rtoolsBaseURL, "result.cgi?req_id=", requestID, sep="")), as="parsed")),
                                       fixed=TRUE)[[1]] > 0)
   if (numberAltStructures == 1) {
     message("No alternative structures were found. 
             Returning canonical structure.")
     canonicalStructureURL <- paste(rtoolsBaseURL, "work/", requestID, "/", "8", 
                                    "/rintw.range.", 1, ".ss.txt", sep="")
-    canonicalStructureResponseContent <- content(GET(canonicalStructureURL))
+    canonicalStructureResponseContent <- content(GET(canonicalStructureURL), as="text", encoding="UTF-8")
     canonicalStructure <- list(sequence=splitString(canonicalStructureResponseContent, split="\n")[1],
                                secondaryStructure=splitString(canonicalStructureResponseContent, split="\n")[2])
     return(canonicalStructure)
@@ -128,7 +125,7 @@ retrieveAlternativeSecondaryStructureResults <- function(requestID) {
   for (i in seq_len(numberAltStructures)){
     altStructureURL <- paste(rtoolsBaseURL, "work/", requestID, "/", "8", 
                              "/rintw.range.", i, ".ss.txt", sep="")
-    altStructureResponseContent <- content(GET(altStructureURL))
+    altStructureResponseContent <- content(GET(altStructureURL), as="text", encoding="UTF-8")
     alternativeStructures[[i]] <- list(sequence=splitString(altStructureResponseContent, split="\n")[1],
                                        secondaryStructure=splitString(altStructureResponseContent, split="\n")[2])
   }

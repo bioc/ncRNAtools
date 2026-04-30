@@ -66,7 +66,7 @@ Mathews DH, Sabina J, Zuker M, Turner DH. Expanded sequence dependence of
 thermodynamic parameters improves prediction of RNA secondary structure.
 J Mol Biol. 1999;288(5):911-940. doi:10.1006/jmbi.1999.2700
 
-http://rtools.cbrc.jp/
+https://www.ncrna.org/rtools/
 }
 \examples{
 # Predict alternative secondary structures of an RNA sequence:

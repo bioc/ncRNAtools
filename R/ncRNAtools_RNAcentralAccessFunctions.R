@@ -32,7 +32,7 @@ rnaCentralRetrieveEntry <- function(rnaCentralID) {
     result <- GET(paste(rnaCentralApiURL, "/", rnaCentralID, sep=""),
                   accept_json())
   }
-  resultContent <- content(result)
+  resultContent <- content(result, as="parsed", type="application/json")
   parsedResult <- list(rnaCentralID=resultContent$rnacentral_id,
                        sequence=resultContent$sequence,
                        sequenceLength=resultContent$length,
@@ -71,7 +71,7 @@ rnaCentralGenomicCoordinatesSearch <- function(genomicRanges, species) {
                           ":", startPoints[i], "-", endPoints[i], sep=""),
                     accept_json())
     }
-    parsedResult <- content(result)
+    parsedResult <- content(result, as="parsed", type="application/json")
     parsedResult <- parsedResult[grepl("^URS", unlist(lapply(parsedResult, `[`, "external_name")))]
     annotatedRNA[[i]] <- lapply(parsedResult, function(hit) list(rnaCentralID=splitString(hit$ID, split="@")[1],
                                                                  species=species,

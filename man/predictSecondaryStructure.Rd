@@ -120,7 +120,7 @@ Sato K, Kato Y, Hamada M, Akutsu T, Asai K. IPknot: fast and accurate prediction
 of RNA secondary structures with pseudoknots using integer programming.
 Bioinformatics. 2011;27(13):i85-i93. doi:10.1093/bioinformatics/btr215
 
-http://rtools.cbrc.jp/
+https://www.ncrna.org/rtools/
 }
 \examples{
 # Predict the secondary structure of an RNA sequence with IPknot:
