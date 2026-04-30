@@ -85,7 +85,7 @@ Information about a specific entry can also be retrieved.
 
 ncRNAtools also enables the prediction of secondary structure of RNA by simply 
 providing a sequence of interest. Secondary structure predictions are performed 
-through the [rtools](http://rtools.cbrc.jp/) web server for RNA Bioinformatics [@hamada2016]. 
+through the [rtools](https://www.ncrna.org/rtools/) web server for RNA Bioinformatics [@hamada2016]. 
 Currently supported methodologies for secondary structure prediction include 
 centroidFold [@hamada2008], centroidHomfold [@hamada2011] and IPknot [@sato2011]. 
 Only IPknot can detect pseudoknots. Alternative secondary structures can be 
