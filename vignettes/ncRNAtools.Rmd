@@ -126,7 +126,7 @@ library(S4Vectors)
 library(ggplot2)
 ```
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 rnaCentralTextSearch("HOTAIR")
 ```
 
@@ -134,14 +134,14 @@ With a more refined search, it is possible to identify RNAs corresponding to the
 FMN riboswitch present in Bacillus subtilis strains only. It should be noted 
 that the quotes enclosing the value for specific fields must be escaped:
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 rnaCentralTextSearch("FMN AND species:\"Bacillus subtilis\"")
 ```
 
 Information about the resulting entries can be retrieved with the 
 "rnaCentralRetrieveEntry" function:
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 rnaCentralRetrieveEntry("URS000037084E_1423")
 ```
 
@@ -160,7 +160,7 @@ In the following example, we aim to retrieve the known ncRNA present in Yarrowia
 lipolytica (oleaginous yeast) between positions 200000 and 300000 of 
 chromosome C, and positions 500000 and 550000 of chromosome D:
 
-```{r tidy = TRUE, tidy.opts=list(width.cutoff = 80)}
+```{r tidy = TRUE, tidy.opts=list(width.cutoff = 80), eval = FALSE}
 ## Generate a GRanges object with the genomic ranges to be used to search the RNAcentral database
 
 genomicCoordinates <- GenomicRanges::GRanges(seqnames=S4Vectors::Rle(c("chrC", "chrD")), 
@@ -195,7 +195,7 @@ nested structures.
 In the following example, all three methods are used to predict the structure of
 a fragment of a tRNA:
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 tRNAfragment <- "UGCGAGAGGCACAGGGUUCGAUUCCCUGCAUCUCCA"
 
 centroidFoldPrediction <- predictSecondaryStructure(tRNAfragment, "centroidFold")
@@ -208,20 +208,19 @@ IPknotPrediction <- predictSecondaryStructure(tRNAfragment, "IPknot")
 IPknotPrediction$secondaryStructure
 ```
 
-It is also possible to predict not only a single canonical secondary structure, 
-but also a set of possible alternative secondary structures. This is achieved 
-with the RintW method [@hagio2018], available through the 
+It is also possible to predict not only a single canonical secondary structure,
+but also a set of possible alternative secondary structures. This is achieved
+with the MC-Fold algorithm, available through the
 "predictAlternativeSecondaryStructures" function.
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 tRNAfragment2 <- "AAAGGGGUUUCCC"
 
-RintWPrediction <- predictAlternativeSecondaryStructures(tRNAfragment2)
+alternativePrediction <- predictAlternativeSecondaryStructures(tRNAfragment2)
 
-length(RintWPrediction) # A total of 2 alternative secondary structures were identified by RintW
+length(alternativePrediction) # Number of alternative secondary structures identified
 
-RintWPrediction[[1]]$secondaryStructure
-RintWPrediction[[2]]$secondaryStructure
+alternativePrediction[[1]]$secondaryStructure
 ```
 
 ## Calculating and plotting of base pair probability matrices
@@ -236,7 +235,7 @@ A matrix of base pair probabilities can be generated with the
 format returned by centroidFold and centroidHomFold. The base pair probabilities
 matrix can then be plotted with the "plotPairsProbabilityMatrix" function:
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 basePairProbabilityMatrix <- generatePairsProbabilityMatrix(centroidFoldPrediction$basePairProbabilities)
 
 plotPairsProbabilityMatrix(basePairProbabilityMatrix)
@@ -254,7 +253,7 @@ Such a dataframe can be generated from a secondary structure string with the
 In the following example, such a composite plot is generated the secondary
 structure predicted by centroidFold for the tRNA fragment:
 
-```{r tidy = TRUE}
+```{r tidy = TRUE, eval = FALSE}
 pairedBases <- findPairedBases(sequence=tRNAfragment, secondaryStructureString=IPknotPrediction$secondaryStructure)
 
 plotCompositePairsMatrix(basePairProbabilityMatrix, pairedBases)

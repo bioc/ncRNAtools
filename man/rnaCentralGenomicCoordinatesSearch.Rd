@@ -48,6 +48,7 @@ https://rnacentral.org/help/genomic-mapping
 https://rnacentral.org/api
 }
 \examples{
+\dontrun{
 # Generate a GRanges object with 2 genomic ranges specifying coordinates of
 # the human genome:
 
@@ -58,4 +59,5 @@ ranges=IRanges::IRanges(rep(39745816, 2), rep(39847679, 2)))
 # ranges:
 
 knownNonCodingRNA <- rnaCentralGenomicCoordinatesSearch(genomicCoordinates, "Homo sapiens")
+}
 }

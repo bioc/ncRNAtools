@@ -1,136 +1,206 @@
+## Secondary structure prediction backends. The ncrna.org/rtools server that
+## previously served CentroidFold, CentroidHomFold, IPknot and RintW was
+## discontinued, so each method is now served by a different web service:
+##   centroidFold    -> ViennaRNA RNAfold web server
+##   centroidHomFold -> Rfam batch search (homology-based, via the matching family)
+##   IPknot          -> IPknot web server at the Sato lab
+##   RintW           -> MC-Fold (predictAlternativeSecondaryStructures)
+
 sendSecondaryStructureQuery <- function(sequence, method, gammaWeight, inferenceEngine,
                                         alignmentEngine, eValueRfamSearch, numHomSeqsRfamSearch) {
-  registerURL <- paste(rtoolsBaseURL, "register.cgi", sep="")
-  methodCode <- match(method, c("centroidFold", "centroidHomFold", "IPknot"))
-  if (is.na(methodCode)) {
+  if (!method %in% c("centroidFold", "centroidHomFold", "IPknot")) {
     stop("Invalid method for secondary structure prediction")
-  }
-  formData <- list(query=paste(">", "Sequence", "\n", sequence, sep="", collapse=""),
-                   methodSelection="checked",
-                   model_str_1="CONTRAfold",
-                   gamma_1="4",
-                   model_str_2="BL",
-                   model_aln_2="CONTRAlign",
-                   gamma_2="8",
-                   eval_2="0.01",
-                   homnum_2="30",
-                   model_str_3="BL",
-                   gamma_3="4")
-  if (!is.null(gammaWeight)) {
-    checkGammaWeight(gammaWeight)
-    formData[c("gamma_1", "gamma_2", "gamma_3")] <- as.character(gammaWeight)
   }
   if (!is.null(inferenceEngine)) {
     checkInferenceEngine(inferenceEngine, method, sequence)
-    formData[c("model_str_1", "model_str_2", "model_str_3")] <- inferenceEngine
+  }
+  if (!is.null(gammaWeight)) {
+    checkGammaWeight(gammaWeight)
   }
   if (!is.null(alignmentEngine)) {
     checkAlignmentEngine(alignmentEngine, method)
-    formData["model_aln_2"] <- alignmentEngine
   }
   if (!is.null(eValueRfamSearch)) {
     checkEValueRfamSearch(eValueRfamSearch, method)
-    formData["eval_2"] <- as.character(eValueRfamSearch)
   }
   if (!is.null(numHomSeqsRfamSearch)) {
     checkNumHomSeqsRfamSearch(numHomSeqsRfamSearch, method)
-    formData["homnum_2"] <- as.character(numHomSeqsRfamSearch)
   }
-  names(formData)[2] <- paste("exec_sel_", methodCode, sep="")
-  response <- POST(registerURL,
-                   body=formData,
-                   encode="form",
-                   add_headers("Content-Type"="application/x-www-form-urlencoded",
-                               "Upgrade-Insecure-Requests"="1",
-                               "Accept"="*/*"))
-  redirectURL <- response$all_headers[[1]]$headers$location
-  requestID <- splitString(redirectURL, split="req_id=")[2]
-  return(c(requestID, methodCode))
-}
-
-sendAlternativeSecondaryStructureQuery <- function(sequence, gammaWeight, inferenceEngine) {
-  registerURL <- paste(rtoolsBaseURL, "register.cgi", sep="")
-  formData <- list(query=paste(">", "Sequence", "\n", sequence, sep="", collapse=""),
-                   exec_sel_8="checked",
-                   model_str_8=inferenceEngine,
-                   gamma_8=gammaWeight)
-  response <- POST(registerURL,
-                   body=formData,
-                   encode="form",
-                   add_headers("Content-Type"="application/x-www-form-urlencoded",
-                               "Upgrade-Insecure-Requests"="1",
-                               "Accept"="*/*"))
-  redirectURL <- response$all_headers[[1]]$headers$location
-  requestID <- splitString(redirectURL, split="req_id=")[2]
-  return(requestID)
-}
-
-checkSecondaryStructureQuery <- function(requestID) {
-  secondaryStructureURL <- paste(rtoolsBaseURL, "result.cgi?req_id=", 
-                                 requestID, sep="")
-  queryResponse <- content(GET(secondaryStructureURL), as="text", encoding="UTF-8")
-  queryRunning <- !grepl("Completed", queryResponse)
-  if (queryRunning) {
-    message("Secondary structure prediction is running, please wait.")
-    return(queryRunning)
+  if (method == "centroidFold") {
+    return(predictWithViennaRNA(sequence))
   }
-  else if (!queryRunning) {
-    message("Secondary structure prediction completed.")
-    return(queryRunning)
+  else if (method == "IPknot") {
+    return(predictWithIPknot(sequence, inferenceEngine))
   }
   else {
-    stop("Malformed query or server unavailable. Please try again.")
+    return(predictWithRfamHomology(sequence))
   }
 }
 
-retrieveSecondaryStructureResults <-function(requestID, methodCode) {
-  secondaryStructureURL <- paste(rtoolsBaseURL, "work/", requestID, "/", 
-                                 methodCode, "/structure.txt", sep="")
-  secondaryStructureResponseContent <- content(GET(secondaryStructureURL), as="text", encoding="UTF-8")
-  secondaryStructure <- list(sequence=splitString(secondaryStructureResponseContent, split="\n")[2],
-                             secondaryStructure=splitString(splitString(secondaryStructureResponseContent, split="\n")[3], split=" ")[1])
-  if(methodCode %in% c(1, 2)) {
-    basePairProbsURL <- paste(rtoolsBaseURL, "work/", requestID, "/", 
-                              methodCode, "/base-pairing-prob.txt", sep="")
-    basePairProbsResponseContent <- content(GET(basePairProbsURL), as="text", encoding="UTF-8")
-    maxFieldsNumber <- max(count.fields(textConnection(basePairProbsResponseContent), sep=" "))
-    basePairProbsTable <- read.table(textConnection(basePairProbsResponseContent), 
-                                     header=FALSE, 
-                                     col.names=c("Position", "Nucleotide", paste0("Pairing", seq(1, maxFieldsNumber-2))), 
-                                     fill = TRUE, sep=" ")
-    return(list(sequence=secondaryStructure[["sequence"]], 
-                secondaryStructure=secondaryStructure[["secondaryStructure"]],
-                basePairProbabilities=basePairProbsTable[, -ncol(basePairProbsTable)]))
+## centroidFold: fold the sequence with the ViennaRNA RNAfold web server, which
+## returns a centroid secondary structure and a base pair probability matrix.
+
+predictWithViennaRNA <- function(sequence) {
+  message("Running secondary structure prediction. This might take some time.")
+  submitURL <- paste(viennaRNABaseURL, "cgi-bin/RNAWebSuite/RNAfold.cgi", sep="")
+  response <- POST(submitURL,
+                   body=list(PAGE="2", SCREEN=sequence, method="p", proceed=""),
+                   encode="multipart")
+  responseText <- content(response, as="text", encoding="UTF-8")
+  jobID <- sub(".*ID=", "",
+               regmatches(responseText, regexpr("PAGE=3&ID=[A-Za-z0-9]+", responseText)))
+  if (length(jobID) == 0 || is.na(jobID)) {
+    stop("Malformed query or ViennaRNA server unavailable. Please try again.")
   }
-  else {
-    return(secondaryStructure)
+  resultsURL <- paste(viennaRNABaseURL, "RNAfold/", jobID, "/", sep="")
+  for (attempt in seq_len(120)) {
+    Sys.sleep(2)
+    if (status_code(GET(paste(resultsURL, "sequence1.vienna", sep=""))) == 200) {
+      break
+    }
   }
+  centroidResponse <- content(GET(paste(resultsURL, "sequence1_centroid.vienna", sep="")),
+                              as="text", encoding="UTF-8")
+  secondaryStructure <- splitString(splitString(centroidResponse, split="\n")[2], split=" ")[1]
+  dotPlotResponse <- content(GET(paste(resultsURL, "sequence1_dp.eps", sep="")),
+                             as="text", encoding="UTF-8")
+  basePairProbsTable <- parseViennaBasePairProbabilities(dotPlotResponse, sequence)
+  return(list(sequence=sequence, secondaryStructure=secondaryStructure,
+              basePairProbabilities=basePairProbsTable))
 }
 
-retrieveAlternativeSecondaryStructureResults <- function(requestID) {
-  numberAltStructures <- sum(gregexpr("range of Hamming distance",
-                                      xml_text(content(GET(paste(rtoolsBaseURL, "result.cgi?req_id=", requestID, sep="")), as="parsed")),
-                                      fixed=TRUE)[[1]] > 0)
-  if (numberAltStructures == 1) {
-    message("No alternative structures were found. 
-            Returning canonical structure.")
-    canonicalStructureURL <- paste(rtoolsBaseURL, "work/", requestID, "/", "8", 
-                                   "/rintw.range.", 1, ".ss.txt", sep="")
-    canonicalStructureResponseContent <- content(GET(canonicalStructureURL), as="text", encoding="UTF-8")
-    canonicalStructure <- list(sequence=splitString(canonicalStructureResponseContent, split="\n")[1],
-                               secondaryStructure=splitString(canonicalStructureResponseContent, split="\n")[2])
-    return(canonicalStructure)
+## Parse the base pair probabilities from the ViennaRNA dot plot PostScript file,
+## where each 'ubox' line holds a base pair as "i j sqrt(probability)", and build
+## a table in the format used by generatePairsProbabilityMatrix.
+
+parseViennaBasePairProbabilities <- function(dotPlotResponse, sequence) {
+  sequenceCharacters <- splitString(sequence, split="")
+  sequenceLength <- length(sequenceCharacters)
+  uboxLines <- grep("^[0-9].*ubox$", splitString(dotPlotResponse, split="\n"), value=TRUE)
+  pairingProbabilities <- vector(mode="list", length=sequenceLength)
+  for (uboxLine in uboxLines) {
+    fields <- splitString(trimws(uboxLine), split=" +")
+    firstBase <- as.integer(fields[1])
+    secondBase <- as.integer(fields[2])
+    probability <- as.numeric(fields[3])^2
+    pairingProbabilities[[firstBase]] <- c(pairingProbabilities[[firstBase]],
+                                           paste(secondBase, format(probability, scientific=FALSE, trim=TRUE), sep=":"))
   }
-  alternativeStructures <- vector(mode="list", length=numberAltStructures)
-  for (i in seq_len(numberAltStructures)){
-    altStructureURL <- paste(rtoolsBaseURL, "work/", requestID, "/", "8", 
-                             "/rintw.range.", i, ".ss.txt", sep="")
-    altStructureResponseContent <- content(GET(altStructureURL), as="text", encoding="UTF-8")
-    alternativeStructures[[i]] <- list(sequence=splitString(altStructureResponseContent, split="\n")[1],
-                                       secondaryStructure=splitString(altStructureResponseContent, split="\n")[2])
+  maxPairings <- max(c(0, lengths(pairingProbabilities)))
+  pairingsMatrix <- matrix("", nrow=sequenceLength, ncol=maxPairings)
+  for (position in seq_len(sequenceLength)) {
+    if (length(pairingProbabilities[[position]]) > 0) {
+      pairingsMatrix[position, seq_along(pairingProbabilities[[position]])] <- pairingProbabilities[[position]]
+    }
   }
-  names(alternativeStructures) <- c("alternativeStructure1-Canonical", 
-                                    paste("alternativeStructure", seq(2, numberAltStructures), sep=""))
+  basePairProbsTable <- data.frame(Position=seq_len(sequenceLength),
+                                   Nucleotide=sequenceCharacters,
+                                   pairingsMatrix, stringsAsFactors=FALSE)
+  if (maxPairings > 0) {
+    colnames(basePairProbsTable)[-(1:2)] <- paste0("Pairing", seq_len(maxPairings))
+  }
+  return(basePairProbsTable)
+}
+
+## IPknot: predict the secondary structure, including pseudoknots, with the
+## IPknot web server hosted at the Sato lab.
+
+predictWithIPknot <- function(sequence, inferenceEngine) {
+  message("Running secondary structure prediction. This might take some time.")
+  serverHandle <- handle(ipknotURL)
+  POST(handle=serverHandle, url=paste(ipknotURL, "process.php", sep=""),
+       body=list(seq=paste(">", "query", "\n", sequence, sep=""),
+                 level="2", model="LinearPartition-C", refinement="1", use_pf="on"),
+       encode="multipart")
+  viennaResponse <- content(GET(handle=serverHandle, url=paste(ipknotURL, "dload_vienna.php", sep="")),
+                            as="text", encoding="UTF-8")
+  responseLines <- splitString(viennaResponse, split="\n")
+  responseLines <- responseLines[responseLines != ""]
+  if (length(responseLines) < 3) {
+    stop("Malformed query or IPknot server unavailable. Please try again.")
+  }
+  return(list(sequence=responseLines[2], secondaryStructure=responseLines[3]))
+}
+
+## centroidHomFold: fold the sequence using homology information. The sequence is
+## searched against the Rfam database and, if it matches a family, the consensus
+## secondary structure of that family is mapped onto the query sequence.
+
+predictWithRfamHomology <- function(sequence) {
+  message("Searching the Rfam database for homologs. This might take some time.")
+  sequenceFile <- tempfile()
+  writeLines(sequence, con=sequenceFile)
+  submitResponse <- POST(rfamBatchSearchURL, accept_json(),
+                         body=list(sequence_file=upload_file(sequenceFile)),
+                         encode="multipart")
+  resultURL <- content(submitResponse)$resultURL
+  if (is.null(resultURL)) {
+    stop("Malformed query or Rfam search server unavailable. Please try again.")
+  }
+  searchResult <- NULL
+  for (attempt in seq_len(100)) {
+    Sys.sleep(3)
+    searchResult <- content(GET(resultURL, accept_json()))
+    if (!is.null(searchResult$closed) && nzchar(searchResult$closed)) {
+      break
+    }
+  }
+  if (is.null(searchResult$closed) || !nzchar(searchResult$closed)) {
+    stop("The Rfam search did not complete. The service may be temporarily unavailable.")
+  }
+  if (length(searchResult$hits) == 0) {
+    stop("No homologous Rfam family was found for the provided sequence.")
+  }
+  bestHit <- searchResult$hits[[1]][[1]]
+  return(mapRfamConsensusStructure(bestHit, sequence))
+}
+
+## Map the consensus secondary structure of the matching Rfam family onto the
+## query sequence, keeping the alignment columns that correspond to query
+## nucleotides and converting the WUSS annotation to Dot-Bracket notation.
+
+mapRfamConsensusStructure <- function(hit, sequence) {
+  alignedStructure <- splitString(hit$alignment$ss, split=" +")[2]
+  alignedQuery <- splitString(hit$alignment$user_seq, split=" +")[3]
+  structureCharacters <- splitString(alignedStructure, split="")
+  queryCharacters <- splitString(alignedQuery, split="")
+  queryColumns <- grepl("[AUGCaugc]", queryCharacters)
+  wussStructure <- structureCharacters[queryColumns]
+  dotBracketStructure <- ifelse(wussStructure %in% c("(", "[", "{", "<"), "(",
+                                ifelse(wussStructure %in% c(")", "]", "}", ">"), ")", "."))
+  return(list(sequence=sequence,
+              secondaryStructure=paste(dotBracketStructure, collapse="")))
+}
+
+## RintW: predict a set of alternative secondary structures with MC-Fold, which
+## returns a ranked set of suboptimal structures for the provided sequence.
+
+sendAlternativeSecondaryStructureQuery <- function(sequence, gammaWeight, inferenceEngine, numStructures) {
+  message("Running secondary structure prediction. This might take some time.")
+  response <- GET(mcFoldURL,
+                  query=list(pass="lucy", sequence=sequence, top=as.character(numStructures),
+                             explore="15", name="", mask=""),
+                  timeout(300))
+  responseText <- content(response, as="text", encoding="latin1")
+  responseText <- gsub("<[^>]*>", "", responseText)
+  structureLines <- grep("^[0-9]+\\)[[:space:]]*[().]+",
+                         trimws(splitString(responseText, split="\n")), value=TRUE)
+  alternativeStructures <- sub("^[0-9]+\\)[[:space:]]*([().]+).*", "\\1", trimws(structureLines))
+  alternativeStructures <- unique(alternativeStructures)
+  if (length(alternativeStructures) == 0) {
+    stop("Malformed query or MC-Fold server unavailable. Please try again.")
+  }
+  return(list(sequence=sequence, alternativeStructures=alternativeStructures))
+}
+
+retrieveAlternativeSecondaryStructureResults <- function(queryResult) {
+  alternativeStructures <- lapply(queryResult$alternativeStructures,
+                                  function(structure) list(sequence=queryResult$sequence,
+                                                           secondaryStructure=structure))
+  names(alternativeStructures) <- c("alternativeStructure1-Canonical",
+                                    if (length(alternativeStructures) > 1) {
+                                      paste("alternativeStructure", seq(2, length(alternativeStructures)), sep="")
+                                    })
   return(alternativeStructures)
 }
 

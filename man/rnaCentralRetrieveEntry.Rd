@@ -42,6 +42,7 @@ https://rnacentral.org/about-us
 https://rnacentral.org/api
 }
 \examples{
+\dontrun{
 # Retrieve information of the RNAcentral entry associated with ID URS00007C2D83_224308:
 
 rnaCentralEntry <- rnaCentralRetrieveEntry("URS00007C2D83_224308")
@@ -49,4 +50,5 @@ rnaCentralEntry <- rnaCentralRetrieveEntry("URS00007C2D83_224308")
 # Extract the corresponding RNA sequence
 
 rnaCentralEntry$sequence
+}
 }

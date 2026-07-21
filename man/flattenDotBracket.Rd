@@ -14,7 +14,7 @@ flattenDotBracket(extendedDotBracketString)
   \item{extendedDotBracketString}{A string with a secondary structure representation
   of an RNA molecule in the extended Dot-Bracket notation. The extended Dot-Bracket
   notation uses dots (".") for unpaired bases, and multiple pairs of symbols ("("-")",
-  "["-"]", "{"-"}", "<"-">", "A"-"a", "B"-"b", "C"-"c" and "D"-"d") to indicate
+  "["-"]", "\{"-"\}", "<"-">", "A"-"a", "B"-"b", "C"-"c" and "D"-"d") to indicate
   paired bases. This allows the format to unambiguously represent highly nested
   structures, including pseudoknots.
   }
