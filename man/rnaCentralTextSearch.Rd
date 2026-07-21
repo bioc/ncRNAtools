@@ -32,6 +32,7 @@ https://rnacentral.org/about-us
 https://rnacentral.org/help/text-search
 }
 \examples{
+\dontrun{
 # Find RNAcentral entries that correspond to the HOTAIR long noncoding RNA:
 
 rnaCentralTextSearch("HOTAIR")
@@ -39,4 +40,5 @@ rnaCentralTextSearch("HOTAIR")
 # Find RNAcentral entries that correspond to FMN riboswitches in Bacillus subtilis:
 
 rnaCentralTextSearch("FMN AND species:\"Bacillus subtilis\"")
+}
 }

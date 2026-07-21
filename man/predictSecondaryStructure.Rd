@@ -4,8 +4,11 @@
 }
 \description{
 Predicts the secondary structure of the provided RNA sequence, using the chosen
-prediction method. Secondary structure predictions are carried out with the
-rtools RNA Bioinformatics Web server.
+prediction method. Each method is run through a dedicated web service:
+centroidFold through the ViennaRNA RNAfold web server, IPknot through the IPknot
+web server hosted at the Sato lab, and centroidHomFold through a search of the
+provided sequence against the Rfam database, folding it according to the
+consensus secondary structure of its matching family.
 }
 \usage{
 predictSecondaryStructure(sequence, method, gammaWeight=NULL, inferenceEngine=NULL,
@@ -57,8 +60,8 @@ alignmentEngine=NULL, eValueRfamSearch=NULL, numHomSeqsRfamSearch=NULL)
   }
 }
 \value{
-If either centroidFold or centroidHomFold are used for predicting secondary
-structure, a list of three elements comprising the query RNA sequence, the predicted
+If centroidFold is used for predicting secondary structure, a list of three
+elements comprising the query RNA sequence, the predicted
 secondary structure and a table of base pair probabilities. The secondary structure
 is represented as a string in the Dot-Bracket format. The three elements of the list
 are:
@@ -74,11 +77,11 @@ are:
   as strings, where a colon separates both fields
   }
 
-If IPknot is used for predicting secondary structure, no table of base pair
-probabilities is returned. Therefore, the output is a list of only two elements
-(sequence and secondaryStructure). Additionally, the secondary structure is
-provided in the extended Dot-Bracket format if required to represent pseudoknots
-unambiguously.
+If centroidHomFold or IPknot are used for predicting secondary structure, no
+table of base pair probabilities is returned. Therefore, the output is a list of
+only two elements (sequence and secondaryStructure). When IPknot is used, the
+secondary structure is provided in the extended Dot-Bracket format if required to
+represent pseudoknots unambiguously.
 }
 \references{
 Andronescu M, Condon A, Hoos HH, Mathews DH, Murphy KP. Computational approaches
@@ -120,9 +123,12 @@ Sato K, Kato Y, Hamada M, Akutsu T, Asai K. IPknot: fast and accurate prediction
 of RNA secondary structures with pseudoknots using integer programming.
 Bioinformatics. 2011;27(13):i85-i93. doi:10.1093/bioinformatics/btr215
 
-https://www.ncrna.org/rtools/
+http://rna.tbi.univie.ac.at/cgi-bin/RNAWebSuite/RNAfold.cgi
+
+https://ws.sato-lab.org/rtips/ipknot++/
 }
 \examples{
+\dontrun{
 # Predict the secondary structure of an RNA sequence with IPknot:
 
 structurePrediction <- predictSecondaryStructure("UGCGAGAGGCACAGGGUUCGAUUCCCUGCA
@@ -131,4 +137,5 @@ UCUCCA", "IPknot", inferenceEngine = "NUPACK")
 # Extract the string representing the secondary structure prediction:
 
 structurePrediction$secondaryStructure
+}
 }

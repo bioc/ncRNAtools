@@ -2,34 +2,17 @@ predictSecondaryStructure <- function(sequence, method, gammaWeight=NULL, infere
                                       alignmentEngine=NULL, eValueRfamSearch=NULL, numHomSeqsRfamSearch=NULL) {
   sequence <- removeNewLines(sequence)
   checkRNAString(sequence)
-  sendQueryResult <- sendSecondaryStructureQuery(sequence, method, gammaWeight=gammaWeight, inferenceEngine=inferenceEngine,
-                                                 alignmentEngine=alignmentEngine, eValueRfamSearch=eValueRfamSearch,
-                                                 numHomSeqsRfamSearch=numHomSeqsRfamSearch)
-  predictionFinished <- FALSE
-  while (!predictionFinished) {
-    Sys.sleep(1)
-    queryRunning <- checkSecondaryStructureQuery(sendQueryResult[1])
-    if (!queryRunning) {
-      predictionFinished <- TRUE
-    }
-  }
-  predictionResult <- retrieveSecondaryStructureResults(sendQueryResult[1], sendQueryResult[2])
+  predictionResult <- sendSecondaryStructureQuery(sequence, method, gammaWeight=gammaWeight,
+                                                  inferenceEngine=inferenceEngine, alignmentEngine=alignmentEngine,
+                                                  eValueRfamSearch=eValueRfamSearch, numHomSeqsRfamSearch=numHomSeqsRfamSearch)
   return(predictionResult)
 }
 
-predictAlternativeSecondaryStructures <- function(sequence, gammaWeight=4, inferenceEngine="BL") {
+predictAlternativeSecondaryStructures <- function(sequence, numStructures=20) {
   sequence <- removeNewLines(sequence)
   checkRNAString(sequence)
-  sendQueryResult <- sendAlternativeSecondaryStructureQuery(sequence, gammaWeight=gammaWeight, inferenceEngine=inferenceEngine)
-  predictionFinished <- FALSE
-  while (!predictionFinished) {
-    Sys.sleep(3)
-    queryRunning <- checkSecondaryStructureQuery(sendQueryResult)
-    if (!queryRunning) {
-      predictionFinished <- TRUE
-    }
-  }
-  predictionResult <- retrieveAlternativeSecondaryStructureResults(sendQueryResult)
+  queryResult <- sendAlternativeSecondaryStructureQuery(sequence, numStructures=numStructures)
+  predictionResult <- retrieveAlternativeSecondaryStructureResults(queryResult)
   return(predictionResult)
 }
 

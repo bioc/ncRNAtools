@@ -1,3 +1,6 @@
+Changes in version 1.22.2 (2026-07-22)
++ Updated the secondary structure prediction functions to use new web services, following the discontinuation of the ncrna.org/rtools server. centroidFold now uses the ViennaRNA RNAfold web server, IPknot the IPknot web server at the Sato lab, centroidHomFold the Rfam batch search, and predictAlternativeSecondaryStructures the MC-Fold web server
+
 Changes in version 1.1.1 (2021-05-04)
 + Fixed a bug causing endless queries in Ubuntu 20.04 when a firewall was present
 
